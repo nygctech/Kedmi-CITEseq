@@ -1,0 +1,31 @@
+#code for generating hashing counts matrices
+#kallisto v0.46.0
+#bustools v0.39.3
+#kite for formatting the barcode list to be useable by kallisto (from https://github.com/pachterlab/kite)
+
+#concatenating all of the hashing reads by sample to make life a bit easier
+
+cat HTO1-TCTAGCGA_L001_R1_001.fastq.gz HTO1-TCTAGCGA_L002_R1_001.fastq.gz > HTO1_R1.fastq.gz
+cat HTO1-TCTAGCGA_L001_R2_001.fastq.gz HTO1-TCTAGCGA_L002_R2_001.fastq.gz > HTO1_R2.fastq.gz
+cat HTO2-GATTAGAT_L001_R1_001.fastq.gz HTO2-GATTAGAT_L002_R1_001.fastq.gz > HTO2_R1.fastq.gz
+cat HTO2-GATTAGAT_L001_R2_001.fastq.gz HTO2-GATTAGAT_L002_R2_001.fastq.gz > HTO2_R2.fastq.gz
+
+
+#Generate proper barcode list for kallisto using kite
+python ./featuremap.py hashtags_kallisto.csv --header --t2g ./FeaturesMismatchHTO.t2g --fa ./FeaturesMismatchHTO.fa
+
+kallisto index -i ./FeaturesMismatchHTO.idx -k 15 ./FeaturesMismatchHTO.fa
+
+#HTO1
+kallisto bus -i ./FeaturesMismatchHTO.idx -o ./HTO1/ -x 10xv3 -t 4 fastq/HTO1_R1.fastq.gz fastq/HTO1_R2.fastq.gz
+bustools correct -w ./10xv3_whitelist.txt ./HTO1/output.bus -o ./HTO1/output_HTO1_corrected.bus
+bustools sort -t 4 -o ./HTO1/output_HTO1_sorted.bus ./HTO1/output_HTO1_corrected.bus
+mkdir ./HTO1/genecount
+bustools count -o ./HTO1/genecount/genecounts --genecounts -g ./FeaturesMismatchHTO.t2g -e ./HTO1/matrix.ec -t ./HTO1/transcripts.txt ./HTO1/output_HTO1_sorted.bus
+
+#HTO2
+kallisto bus -i ./FeaturesMismatchHTO.idx -o ./HTO2/ -x 10xv3 -t 4 fastq/HTO2_R1.fastq.gz fastq/HTO2_R2.fastq.gz
+bustools correct -w ./10xv3_whitelist.txt ./HTO2/output.bus -o ./HTO2/output_HTO2_corrected.bus
+bustools sort -t 4 -o ./HTO2/output_HTO2_sorted.bus ./HTO2/output_HTO2_corrected.bus
+mkdir ./HTO2/genecount
+bustools count -o ./HTO2/genecount/genecounts --genecounts -g ./FeaturesMismatchHTO.t2g -e ./HTO2/matrix.ec -t ./HTO2/transcripts.txt ./HTO2/output_HTO2_sorted.bus 

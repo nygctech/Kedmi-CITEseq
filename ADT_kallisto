@@ -1,0 +1,36 @@
+#Code for ADT samples
+#bustools v0.39.3
+#kallisto v0.46.0
+
+#to make life easier, concatenate each of the ADT reads together by sample
+cat ADT1-CTGTAACT_L001_R1_001.fastq.gz ADT1-CTGTAACT_L002_R1_001.fastq.gz > ADT1_R1.fastq.gz
+cat ADT1-CTGTAACT_L001_R2_001.fastq.gz ADT1-CTGTAACT_L002_R2_001.fastq.gz > ADT1_R2.fastq.gz
+cat ADT2-ACCGTATG_L001_R1_001.fastq.gz ADT2-ACCGTATG_L002_R1_001.fastq.gz > ADT2_R1.fastq.gz
+cat ADT2-ACCGTATG_L001_R2_001.fastq.gz ADT2-ACCGTATG_L002_R2_001.fastq.gz > ADT2_R2.fastq.gz
+
+#for generating the kallisto index - use kite from the pachter lab (https://github.com/pachterlab/kite)
+python /gpfs/commons/groups/innovation/steph/200318_BAP_NP/kite/featuremap/featuremap.py ./ADT_barcode_list.csv --header --t2g ./FeaturesMismatchADT.t2g --fa ./FeaturesMismatchADT.fa
+
+kallisto index -i ./FeaturesMismatchADT.idx -k 15 ./FeaturesMismatchADT.fa
+
+#ADT1 matrices
+kallisto bus -i ./FeaturesMismatchADT.idx -o ./ADT1/ -x 10xv3 -t 4 fastq/ADT1_R1.fastq.gz fastq/ADT1_R2.fastq.gz
+
+bustools correct -w ./10xv3_whitelist.txt ./ADT1/output.bus -o ./ADT1/output_ADT_corrected.bus
+
+bustools sort -t 4 -o ./ADT1/output_ADT_sorted.bus ./ADT1/output_ADT_corrected.bus
+
+mkdir ADT1/genecount
+
+bustools count -o ./ADT1/genecount/genecounts --genecounts -g ./FeaturesMismatchADT.t2g -e ./ADT1/matrix.ec -t ./ADT1/transcripts.txt ./ADT1/output_ADT_sorted.bus
+
+#ADT2 matrices
+kallisto bus -i ./FeaturesMismatchADT.idx -o ./ADT2/ -x 10xv3 -t 4 fastq/ADT2_R1.fastq.gz fastq/ADT2_R2.fastq.gz
+
+bustools correct -w ./10xv3_whitelist.txt ./ADT2/output.bus -o ./ADT2/output_ADT_corrected.bus
+
+bustools sort -t 4 -o ./ADT2/output_ADT_sorted.bus ./ADT2/output_ADT_corrected.bus
+
+mkdir ADT2/genecount
+
+bustools count -o ./ADT2/genecount/genecounts --genecounts -g ./FeaturesMismatchADT.t2g -e ./ADT2/matrix.ec -t ./ADT2/transcripts.txt ./ADT2/output_ADT_sorted.bus 
